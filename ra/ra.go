@@ -5,12 +5,12 @@
 * FECHA: septiembre de 2021
 * FICHERO: ricart-agrawala.go
 * DESCRIPCIÓN: Implementación del algoritmo de Ricart-Agrawala Generalizado en Go
-*/
+ */
 package ra
 
 import (
-    "ms"
-    "sync"
+	"sisdis-pr-2/ms"
+	"sync"
 )
 
 type Request struct{
@@ -21,24 +21,59 @@ type Request struct{
 type Reply struct{}
 
 type RASharedDB struct {
-    OurSeqNum   int
-    HigSeqNum   int
-    OutRepCnt   int
-    ReqCS       boolean
-    RepDefd     int[]
-    ms          *MessageSystem
+    // constantes
+    me          int     // This node's unique number
+    N           int     // number of nodes in the network
+    // enteros
+    OurSeqNum   int     // The sequence number chosen by a request originating at this node 
+    HigSeqNum   int     // The highest sequence number seen in any REQUEST message sent or recived
+    OutRepCnt   int     // The number of REPLY  messages still expected
+    // booleanos
+    ReqCS       bool    // True if the node is requesting the critical section
+    RepDefd     []bool  // The reply_deferred[j] is TRUE when this node is deferring a REPLY to j's REQUEST message
+    // semaforo binario
+    Mutex       sync.Mutex  // mutex para proteger concurrencia sobre las variables
+    // otros
+    ms          *ms.MessageSystem
     done        chan bool
     chrep       chan bool
-    Mutex       sync.Mutex // mutex para proteger concurrencia sobre las variables
-    // TODO: completar
+
 }
 
 
 func New(me int, usersFile string) (*RASharedDB) {
-    messageTypes := []Message{Request, Reply}
-    msgs = ms.New(me, usersFile string, messageTypes)
-    ra := RASharedDB{0, 0, 0, false, []int{}, &msgs,  make(chan bool),  make(chan bool), &sync.Mutex{}}
+    messageTypes := []ms.Message{Request{}, Reply{}}
+    msgs := ms.New(me, usersFile, messageTypes)
+    ra := RASharedDB{me, 999, 0, 0, 0, false, make([]bool, 999), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
     // TODO completar
+
+    for {
+        select {
+        case <- ra.done:
+            return &ra
+        default:
+            data := ra.ms.Receive()
+            switch msg := data.(type) {
+            // Alguien quiere entrar en SC
+            case Request:
+                
+            //Caso de que ambos sean iguales; ordenar por PID
+                
+            // Recibo respuesta/permiso para entrar en SC
+            case Reply:
+                if ra.ReqCS {
+                    ra.OutRepCnt = ra.OutRepCnt - 1 // Permiso recibido
+                    if ra.OutRepCnt == 0 {          // Todos los permisos recibidos
+                        ra.chrep <- true
+                    }
+                }
+
+            // Mensaje de error
+            default: continue
+            }
+        }
+    }
+    
     return &ra
 }
 
@@ -46,14 +81,34 @@ func New(me int, usersFile string) (*RASharedDB) {
 //Post: Realiza  el  PreProtocol  para el  algoritmo de
 //      Ricart-Agrawala Generalizado
 func (ra *RASharedDB) PreProtocol(){
-    // TODO completar
+    ra.Mutex.Lock()
+    ra.OurSeqNum = ra.OurSeqNum + 1
+    ra.ReqCS = true
+    ra.OutRepCnt = ra.OutRepCnt - 1
+    ra.Mutex.Unlock()
+
+    for i := 0; i < ra.N; i++ {
+        if i != ra.me {
+            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me})
+        }
+    }
+
+    <- ra.chrep
 }
 
 //Pre: Verdad
 //Post: Realiza  el  PostProtocol  para el  algoritmo de
 //      Ricart-Agrawala Generalizado
 func (ra *RASharedDB) PostProtocol(){
-    // TODO completar
+    ra.Mutex.Lock()
+    ra.ReqCS = false
+    ra.Mutex.Unlock()
+
+    for j := 0; j < ra.N; j++ {
+        if j != ra.me && ra.RepDefd[j] {
+            ra.ms.Send(j, Reply{})
+        }
+    }
 }
 
 func (ra *RASharedDB) Stop(){
