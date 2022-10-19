@@ -27,3 +27,8 @@ const (
 func Exclude(A1 ACTOR, A2 ACTOR) bool {
 	return A1 == ESCRITOR || A2 == ESCRITOR
 }
+
+func Max(a, b int) int {
+	if a > b { return a}
+	return b
+}

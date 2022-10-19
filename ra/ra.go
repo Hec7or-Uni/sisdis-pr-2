@@ -46,7 +46,7 @@ type RASharedDB struct {
 func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
-    ra := RASharedDB{me, 2, actor_t, 0, 0, 0, false, make([]bool, 2), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
+    ra := RASharedDB{me, 4, actor_t, 0, 0, 0, false, make([]bool, 4), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {
@@ -54,8 +54,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
             case <- ra.done:
                 return
             default:
-                data := ra.ms.Receive()
-                switch msg := data.(type) {
+                switch msg := (ra.ms.Receive()).(type) {
                 // Alguien quiere entrar en SC
                 case Request:
                     // Si no queremos entrar en SC: enviamos reply
@@ -63,6 +62,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     //      - El que quiere entrar tiene un clock mayor
                     //      - El que quiere entrar tiene un clock igual y un pid mayor
                     ra.Mutex.Lock()
+                    ra.HigSeqNum = cmd.Max(ra.HigSeqNum, msg.Clock)
                     condition := !ra.ReqCS ||
                         ra.HigSeqNum > msg.Clock && cmd.Exclude(ra.Actor, msg.Actor) ||
                         ra.HigSeqNum == msg.Clock && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor)
@@ -86,7 +86,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     }
 
                 // Mensaje de error
-                default: continue
+                default: return
                 }
             }
         }
@@ -105,7 +105,7 @@ func (ra *RASharedDB) PreProtocol(){
     ra.OutRepCnt = ra.OutRepCnt - 1
     ra.Mutex.Unlock()
 
-    for i := 0; i < ra.N; i++ {
+    for i := 1; i <= ra.N; i++ {
         if i != ra.me {
             ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
         }
@@ -122,8 +122,8 @@ func (ra *RASharedDB) PostProtocol(){
     ra.ReqCS = false
     ra.Mutex.Unlock()
 
-    for j := 0; j < ra.N; j++ {
-        if j != ra.me && ra.RepDefd[j] {
+    for j := 1; j <= ra.N; j++ {
+        if j != ra.me && ra.RepDefd[j-1] {
             ra.ms.Send(j, Reply{})
         }
     }
