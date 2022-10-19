@@ -11,3 +11,19 @@ func CheckError(err error) {
 		os.Exit(1)
 	}
 }
+
+
+type ACTOR string
+
+const (
+	LECTOR	ACTOR	=	"lector"
+	ESCRITOR			= "escritor"
+)
+
+// RD && RD -> FALSE
+// RD && WR -> TRUE
+// WR && RD -> TRUE
+// WR && WR -> TRUE
+func Exclude(A1 ACTOR, A2 ACTOR) bool {
+	return A1 == ESCRITOR || A2 == ESCRITOR
+}

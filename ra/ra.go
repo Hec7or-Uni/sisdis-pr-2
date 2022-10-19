@@ -9,6 +9,7 @@
 package ra
 
 import (
+	"sisdis-pr-2/cmd"
 	"sisdis-pr-2/ms"
 	"sync"
 )
@@ -16,34 +17,36 @@ import (
 type Request struct{
     Clock   int
     Pid     int
+    Actor   cmd.ACTOR
 }
 
 type Reply struct{}
 
 type RASharedDB struct {
-    // constantes
+    // Constantes
     me          int     // This node's unique number
-    N           int     // number of nodes in the network
-    // enteros
+    N           int     // Number of nodes in the network
+    Actor       cmd.ACTOR  // Actor type
+    // Enteros
     OurSeqNum   int     // The sequence number chosen by a request originating at this node 
     HigSeqNum   int     // The highest sequence number seen in any REQUEST message sent or recived
     OutRepCnt   int     // The number of REPLY  messages still expected
-    // booleanos
+    // Booleanos
     ReqCS       bool    // True if the node is requesting the critical section
     RepDefd     []bool  // The reply_deferred[j] is TRUE when this node is deferring a REPLY to j's REQUEST message
-    // semaforo binario
-    Mutex       sync.Mutex  // mutex para proteger concurrencia sobre las variables
-    // otros
+    // Semaforo binario
+    Mutex       sync.Mutex  // Mutex para proteger concurrencia sobre las variables
+    // Otros
     ms          *ms.MessageSystem
     done        chan bool
     chrep       chan bool
 }
 
 
-func New(me int, usersFile string) (*RASharedDB) {
+func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
-    ra := RASharedDB{me, 999, 0, 0, 0, false, make([]bool, 999), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
+    ra := RASharedDB{me, 4, actor_t, 0, 0, 0, false, make([]bool, 4), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {
@@ -57,13 +60,20 @@ func New(me int, usersFile string) (*RASharedDB) {
                 case Request:
                     // Si no queremos entrar en SC: enviamos reply
                     // Si queremos entrar en SC enviamos reply si:
-                    //      - El mensaje es de un proceso con un clock menor
-                    //      - El mensaje es de un proceso con un clock igual y un pid menor
-                    if !ra.ReqCS || (ra.HigSeqNum > msg.Clock) || (ra.HigSeqNum == msg.Clock && ra.me > msg.Pid) {
+                    //      - El que quiere entrar tiene un clock mayor
+                    //      - El que quiere entrar tiene un clock igual y un pid mayor
+                    ra.Mutex.Lock()
+                    condition := !ra.ReqCS ||
+                        ra.HigSeqNum > msg.Clock && cmd.Exclude(ra.Actor, msg.Actor) ||
+                        ra.HigSeqNum == msg.Clock && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor)
+                    ra.Mutex.Unlock()
+                   
+                    if condition {
                         ra.ms.Send(msg.Pid, Reply{})
                         continue
                     }
                     
+                    // Estamos en sección crítica y el mensaje es de un proceso con un clock mayor (tenemos prioridad)
                     ra.RepDefd[msg.Pid] = true
                     
                 // Recibo respuesta/permiso para entrar en SC
@@ -97,7 +107,7 @@ func (ra *RASharedDB) PreProtocol(){
 
     for i := 0; i < ra.N; i++ {
         if i != ra.me {
-            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me})
+            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
         }
     }
 
