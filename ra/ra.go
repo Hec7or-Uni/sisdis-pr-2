@@ -46,7 +46,7 @@ type RASharedDB struct {
 func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
-    ra := RASharedDB{me, 4, actor_t, 0, 0, 0, false, make([]bool, 4), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
+    ra := RASharedDB{me, 2, actor_t, 0, 0, 2, false, make([]bool, 2), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {
@@ -64,17 +64,16 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     ra.Mutex.Lock()
                     ra.HigSeqNum = cmd.Max(ra.HigSeqNum, msg.Clock)
                     condition := !ra.ReqCS ||
-                        ra.HigSeqNum > msg.Clock && cmd.Exclude(ra.Actor, msg.Actor) ||
-                        ra.HigSeqNum == msg.Clock && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor)
+                        (ra.HigSeqNum > msg.Clock && cmd.Exclude(ra.Actor, msg.Actor)) ||
+                        (ra.HigSeqNum == msg.Clock && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor))
                     ra.Mutex.Unlock()
                    
                     if condition {
                         ra.ms.Send(msg.Pid, Reply{})
                         continue
                     }
-                    
                     // Estamos en sección crítica y el mensaje es de un proceso con un clock mayor (tenemos prioridad)
-                    ra.RepDefd[msg.Pid] = true
+                    ra.RepDefd[msg.Pid-1] = true
                     
                 // Recibo respuesta/permiso para entrar en SC
                 case Reply:
@@ -123,10 +122,12 @@ func (ra *RASharedDB) PostProtocol(){
     ra.Mutex.Unlock()
 
     for j := 1; j <= ra.N; j++ {
-        if j != ra.me && ra.RepDefd[j-1] {
+        if ra.RepDefd[j-1] {
+            ra.RepDefd[j-1] = false
             ra.ms.Send(j, Reply{})
         }
     }
+    ra.OutRepCnt = 2
 }
 
 func (ra *RASharedDB) Stop(){

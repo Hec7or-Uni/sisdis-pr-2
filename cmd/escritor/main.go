@@ -6,10 +6,11 @@ import (
 	"sisdis-pr-2/cmd"
 	"sisdis-pr-2/ra"
 	"strconv"
+	"time"
 )
 
 func EscribirFichero(fragmento string) {
-	file, err := os.OpenFile("../../file.txt", os.O_APPEND, 0600)
+	file, err := os.OpenFile("file.txt", os.O_APPEND|os.O_RDWR, 0600)
 	cmd.CheckError(err)
 	defer file.Close()
 		
@@ -27,10 +28,10 @@ func main() {
 	PID, _ := strconv.Atoi(args[0])
 	
 	ra := ra.New(PID, args[1], cmd.ESCRITOR)
-
-	for i := 1; i < ITERACIONES; i++ {
+	time.Sleep(3 * time.Second)
+	for i := 0; i < ITERACIONES; i++ {
 		ra.PreProtocol()
-		EscribirFichero("Hola mundo")
+		EscribirFichero("Hola mundo\n")
 		ra.PostProtocol()
 	}
 	ra.Stop()
