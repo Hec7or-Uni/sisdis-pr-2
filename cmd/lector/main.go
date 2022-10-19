@@ -9,8 +9,8 @@ import (
 )
 
 
-func LeerFichero(path string) string {
-	data, err := ioutil.ReadFile(path)
+func LeerFichero() string {
+	data, err := ioutil.ReadFile("../../file.txt")
 	cmd.CheckError(err)
 	return string(data)
 }
@@ -26,7 +26,7 @@ func main() {
 
 	for i := 1; i < ITERACIONES; i++ {
 		ra.PreProtocol()
-		LeerFichero(args[1])
+		LeerFichero()
 		ra.PostProtocol()
 	}
 	ra.Stop()

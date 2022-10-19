@@ -8,8 +8,8 @@ import (
 	"strconv"
 )
 
-func EscribirFichero(path, fragmento string) {
-	file, err := os.OpenFile(path, os.O_APPEND, 0600)
+func EscribirFichero(fragmento string) {
+	file, err := os.OpenFile("../../file.txt", os.O_APPEND, 0600)
 	cmd.CheckError(err)
 	defer file.Close()
 		
@@ -30,7 +30,7 @@ func main() {
 
 	for i := 1; i < ITERACIONES; i++ {
 		ra.PreProtocol()
-		EscribirFichero("file.txt", "Hola mundo")
+		EscribirFichero("Hola mundo")
 		ra.PostProtocol()
 	}
 	ra.Stop()

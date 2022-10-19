@@ -46,7 +46,7 @@ type RASharedDB struct {
 func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
-    ra := RASharedDB{me, 4, actor_t, 0, 0, 0, false, make([]bool, 4), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
+    ra := RASharedDB{me, 2, actor_t, 0, 0, 0, false, make([]bool, 2), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {

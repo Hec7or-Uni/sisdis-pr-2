@@ -2,16 +2,20 @@
 
 Aplicación distribuida para el problema de los lectores y escritores.
 
+## Requirements
+
+`file.txt` in the root directory.
+
 ## Getting Started
 
 ### Lectores
 
 ```bash
-./lector <pid> <path>
+./lector <pid> <userFilePath>
 ```
 
 ### Escritores
 
 ```bash
-./escritor <pid> <path>
+./escritor <pid> <userFilePath>
 ```
