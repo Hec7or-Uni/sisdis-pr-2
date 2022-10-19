@@ -37,7 +37,6 @@ type RASharedDB struct {
     ms          *ms.MessageSystem
     done        chan bool
     chrep       chan bool
-
 }
 
 
@@ -45,34 +44,43 @@ func New(me int, usersFile string) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
     ra := RASharedDB{me, 999, 0, 0, 0, false, make([]bool, 999), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
-    // TODO completar
 
-    for {
-        select {
-        case <- ra.done:
-            return &ra
-        default:
-            data := ra.ms.Receive()
-            switch msg := data.(type) {
-            // Alguien quiere entrar en SC
-            case Request:
-                
-            //Caso de que ambos sean iguales; ordenar por PID
-                
-            // Recibo respuesta/permiso para entrar en SC
-            case Reply:
-                if ra.ReqCS {
-                    ra.OutRepCnt = ra.OutRepCnt - 1 // Permiso recibido
-                    if ra.OutRepCnt == 0 {          // Todos los permisos recibidos
-                        ra.chrep <- true
+    go func ()  {
+        for {
+            select {
+            case <- ra.done:
+                return
+            default:
+                data := ra.ms.Receive()
+                switch msg := data.(type) {
+                // Alguien quiere entrar en SC
+                case Request:
+                    // Si no queremos entrar en SC: enviamos reply
+                    // Si queremos entrar en SC enviamos reply si:
+                    //      - El mensaje es de un proceso con un clock menor
+                    //      - El mensaje es de un proceso con un clock igual y un pid menor
+                    if !ra.ReqCS || (ra.HigSeqNum > msg.Clock) || (ra.HigSeqNum == msg.Clock && ra.me > msg.Pid) {
+                        ra.ms.Send(msg.Pid, Reply{})
+                        continue
                     }
-                }
+                    
+                    ra.RepDefd[msg.Pid] = true
+                    
+                // Recibo respuesta/permiso para entrar en SC
+                case Reply:
+                    if ra.ReqCS {
+                        ra.OutRepCnt = ra.OutRepCnt - 1 // Permiso recibido
+                        if ra.OutRepCnt == 0 {          // Todos los permisos recibidos
+                            ra.chrep <- true
+                        }
+                    }
 
-            // Mensaje de error
-            default: continue
+                // Mensaje de error
+                default: continue
+                }
             }
         }
-    }
+    }()
     
     return &ra
 }
