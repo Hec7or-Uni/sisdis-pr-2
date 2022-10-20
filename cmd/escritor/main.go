@@ -7,6 +7,8 @@ import (
 	"sisdis-pr-2/ra"
 	"strconv"
 	"time"
+
+	"github.com/DistributedClocks/GoVector/govec"
 )
 
 func EscribirFichero(fragmento string) {
@@ -23,14 +25,14 @@ func main() {
 
 	args := os.Args[1:]
 	PID, _ := strconv.Atoi(args[0])
-	
-	ra := ra.New(PID, args[1], cmd.ESCRITOR)
+	logger := govec.InitGoVector(fmt.Sprintf("P%d", PID), fmt.Sprintf("logs/r%d", PID), govec.GetDefaultConfig())
+	ra := ra.New(PID, args[1], cmd.ESCRITOR, logger)
 	time.Sleep(1 * time.Second)
 	for i := 0; i < ITERACIONES; i++ {
-		ra.PreProtocol()
+		ra.PreProtocol(logger)
 		EscribirFichero("Hola mundo\n")
 		fmt.Printf("%d esta escribiendo...\n", PID)
-		ra.PostProtocol()
+		ra.PostProtocol(logger)
 		time.Sleep(3 * time.Millisecond)
 	}
 	ra.Stop()

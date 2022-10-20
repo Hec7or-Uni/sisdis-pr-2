@@ -1,0 +1,8 @@
+P2 {"P2":1}
+Initialization Complete
+P2 {"P2":2}
+INFO Sending request
+P2 {"P2":3}
+INFO Sending request
+P2 {"P2":4}
+INFO Sending request

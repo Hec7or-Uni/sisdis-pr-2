@@ -1,0 +1,16 @@
+P1 {"P1":1}
+Initialization Complete
+P1 {"P1":2}
+INFO Receive request
+P1 {"P1":3}
+INFO Sending reply
+P1 {"P1":4}
+INFO Sending request
+P1 {"P1":5}
+INFO Receive request
+P1 {"P1":6}
+INFO Sending request
+P1 {"P1":7}
+INFO Sending request
+P1 {"P1":8}
+INFO Receive request

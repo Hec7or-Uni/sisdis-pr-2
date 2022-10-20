@@ -12,6 +12,8 @@ import (
 	"sisdis-pr-2/cmd"
 	"sisdis-pr-2/ms"
 	"sync"
+
+	"github.com/DistributedClocks/GoVector/govec"
 )
 
 const MAX_PROCESSES = 4
@@ -20,9 +22,12 @@ type Request struct{
     Clock   []int
     Pid     int
     Actor   cmd.ACTOR
+    log []byte
 }
 
-type Reply struct{}
+type Reply struct{
+    log []byte
+}
 
 type RASharedDB struct {
     // Constantes
@@ -44,7 +49,7 @@ type RASharedDB struct {
 }
 
 
-func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
+func New(me int, usersFile string, actor_t cmd.ACTOR, logger *govec.GoLog) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
     ra := RASharedDB{me, MAX_PROCESSES, actor_t, make([]int, MAX_PROCESSES), MAX_PROCESSES, false, make([]bool, MAX_PROCESSES), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
@@ -58,7 +63,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                 switch msg := (ra.ms.Receive()).(type) {
                 // Alguien quiere entrar en SC
                 case Request:
-
+                    logger.UnpackReceive("Receive request", msg.log, nil, govec.GetDefaultLogOptions())
                     cmd.MaxArray(ra.OurSeqNum, msg.Clock)
                     // Si no queremos entrar en SC: enviamos reply
                     // Si queremos entrar en SC enviamos reply si:
@@ -71,7 +76,8 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     ra.Mutex.Unlock()
                    
                     if condition {
-                        ra.ms.Send(msg.Pid, Reply{})
+                        log := logger.PrepareSend("Sending reply", nil, govec.GetDefaultLogOptions())
+                        ra.ms.Send(msg.Pid, Reply{log})
                         continue
                     }
 
@@ -80,7 +86,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     
                 // Recibo respuesta/permiso para entrar en SC
                 case Reply:
-
+                    logger.UnpackReceive("Receive reply", msg.log, nil, govec.GetDefaultLogOptions())
                     if ra.ReqCS {
                         ra.OutRepCnt = ra.OutRepCnt - 1 // Permiso recibido
                         if ra.OutRepCnt == 0 {          // Todos los permisos recibidos
@@ -101,7 +107,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
 //Pre: Verdad
 //Post: Realiza  el  PreProtocol  para el  algoritmo de
 //      Ricart-Agrawala Generalizado
-func (ra *RASharedDB) PreProtocol(){
+func (ra *RASharedDB) PreProtocol(logger *govec.GoLog) {
     ra.Mutex.Lock()
     ra.OurSeqNum[ra.me-1] = ra.OurSeqNum[ra.me-1] + 1
     ra.ReqCS = true
@@ -110,7 +116,8 @@ func (ra *RASharedDB) PreProtocol(){
 
     for i := 1; i <= ra.N; i++ {
         if i != ra.me {
-            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
+            log := logger.PrepareSend("Sending request", nil, govec.GetDefaultLogOptions())
+            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor, log})
         }
     }
 
@@ -120,7 +127,7 @@ func (ra *RASharedDB) PreProtocol(){
 //Pre: Verdad
 //Post: Realiza  el  PostProtocol  para el  algoritmo de
 //      Ricart-Agrawala Generalizado
-func (ra *RASharedDB) PostProtocol(){
+func (ra *RASharedDB) PostProtocol(logger *govec.GoLog) {
     ra.Mutex.Lock()
     ra.ReqCS = false
     ra.Mutex.Unlock()
@@ -128,7 +135,8 @@ func (ra *RASharedDB) PostProtocol(){
     for j := 1; j <= ra.N; j++ {
         if ra.RepDefd[j-1] {
             ra.RepDefd[j-1] = false
-            ra.ms.Send(j, Reply{})
+            log := logger.PrepareSend("Sending reply", j, govec.GetDefaultLogOptions())
+            ra.ms.Send(j, Reply{log})
         }
     }
     ra.OutRepCnt = MAX_PROCESSES
