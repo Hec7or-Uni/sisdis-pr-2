@@ -11,22 +11,18 @@ package ra
 import (
 	"sisdis-pr-2/cmd"
 	"sisdis-pr-2/ms"
-	"strconv"
 	"sync"
-
-	"github.com/DistributedClocks/GoVector/govec"
 )
+
+const MAX_PROCESSES = 4
 
 type Request struct{
     Clock   int
     Pid     int
     Actor   cmd.ACTOR
-    VCM     []byte  // Vector Clock Message (GoVector)
 }
 
-type Reply struct{
-    VCM     []byte  // Vector Clock Message (GoVector)
-}
+type Reply struct{}
 
 type RASharedDB struct {
     // Constantes
@@ -46,16 +42,13 @@ type RASharedDB struct {
     ms          *ms.MessageSystem
     done        chan bool
     chrep       chan bool
-    // Logger
-    logger      *govec.GoLog
 }
 
 
 func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
-    msgs := ms.New(string(actor_t) + strconv.Itoa(me), "log_" + strconv.Itoa(me), messageTypes)
-    logger := govec.InitGoVector(me, "LogFile", govec.GetDefaultConfig())
-    ra := RASharedDB{me, 2, actor_t, 0, 0, 2, false, make([]bool, 2), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool), logger}
+    msgs := ms.New(me, usersFile, messageTypes)
+    ra := RASharedDB{me, MAX_PROCESSES, actor_t, 0, 0, MAX_PROCESSES, false, make([]bool, MAX_PROCESSES), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {
@@ -66,9 +59,6 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                 switch msg := (ra.ms.Receive()).(type) {
                 // Alguien quiere entrar en SC
                 case Request:
-
-                    var response []byte
-                    ra.logger.UnpackReceive("Solicitud de acceso a SC", msg.VCM, &response, govec.GetDefaultLogOptions())
                     // Si no queremos entrar en SC: enviamos reply
                     // Si queremos entrar en SC enviamos reply si:
                     //      - El que quiere entrar tiene un clock mayor
@@ -81,25 +71,19 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     ra.Mutex.Unlock()
                    
                     if condition {
-                        payload := []byte("Permito acceso a SC")
-                        VCM := ra.logger.PrepareSend("Permitiendo acceso a SC", payload, govec.GetDefaultLogOptions())
-                        ra.ms.Send(msg.Pid, Reply{VCM})
+                        ra.ms.Send(msg.Pid, Reply{})
                         continue
                     }
 
-                    ra.logger.LogLocalEvent("Encolo peticiones de acceso a SC", govec.GetDefaultLogOptions())
                     // Estamos en sección crítica y el mensaje es de un proceso con un clock mayor (tenemos prioridad)
                     ra.RepDefd[msg.Pid-1] = true
                     
                 // Recibo respuesta/permiso para entrar en SC
                 case Reply:
-                    var response []byte
-                    ra.logger.UnpackReceive("Permiso de acceso a SC recibido", msg.VCM, &response, govec.GetDefaultLogOptions())
 
                     if ra.ReqCS {
                         ra.OutRepCnt = ra.OutRepCnt - 1 // Permiso recibido
                         if ra.OutRepCnt == 0 {          // Todos los permisos recibidos
-                            ra.logger.LogLocalEvent("Entro en SC", govec.GetDefaultLogOptions())
                             ra.chrep <- true
                         }
                     }
@@ -126,9 +110,7 @@ func (ra *RASharedDB) PreProtocol(){
 
     for i := 1; i <= ra.N; i++ {
         if i != ra.me {
-            payload := []byte("Solicitud de SC")
-            VCM := ra.logger.PrepareSend("Solicitando acceso a SC", payload, govec.GetDefaultLogOptions())
-            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor, VCM})
+            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
         }
     }
 
@@ -146,12 +128,10 @@ func (ra *RASharedDB) PostProtocol(){
     for j := 1; j <= ra.N; j++ {
         if ra.RepDefd[j-1] {
             ra.RepDefd[j-1] = false
-            payload := []byte("Abandono la SC")
-            VCM := ra.logger.PrepareSend("Notificando salida de SC", payload, govec.GetDefaultLogOptions())
-            ra.ms.Send(j, Reply{VCM})
+            ra.ms.Send(j, Reply{})
         }
     }
-    ra.OutRepCnt = 2
+    ra.OutRepCnt = MAX_PROCESSES
 }
 
 func (ra *RASharedDB) Stop(){

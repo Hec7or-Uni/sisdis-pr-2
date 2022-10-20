@@ -14,10 +14,7 @@ func EscribirFichero(fragmento string) {
 	cmd.CheckError(err)
 	defer file.Close()
 		
-	len, err := file.WriteString(fragmento)
-	cmd.CheckError(err)
-
-	fmt.Printf("\nLength: %d bytes", len)
+	file.WriteString(fragmento)
 }
 
 func main() {
@@ -32,7 +29,9 @@ func main() {
 	for i := 0; i < ITERACIONES; i++ {
 		ra.PreProtocol()
 		EscribirFichero("Hola mundo\n")
+		fmt.Printf("%d esta escribiendo...\n", PID)
 		ra.PostProtocol()
+		time.Sleep(3 * time.Millisecond)
 	}
 	ra.Stop()
 }

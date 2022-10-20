@@ -24,11 +24,13 @@ func main() {
 	PID, _ := strconv.Atoi(args[0])
 	
 	ra := ra.New(PID, args[1], cmd.LECTOR)
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 	for i := 0; i < ITERACIONES; i++ {
 		ra.PreProtocol()
-		fmt.Println(LeerFichero())
+		LeerFichero()
+		fmt.Printf("%d esta leyendo...\n", PID)
 		ra.PostProtocol()
+		time.Sleep(3 * time.Millisecond)
 	}
 	ra.Stop()
 }
