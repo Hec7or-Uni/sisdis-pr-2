@@ -17,7 +17,7 @@ import (
 const MAX_PROCESSES = 4
 
 type Request struct{
-    Clock   int
+    Clock   []int
     Pid     int
     Actor   cmd.ACTOR
 }
@@ -30,8 +30,7 @@ type RASharedDB struct {
     N           int     // Number of nodes in the network
     Actor       cmd.ACTOR  // Actor type
     // Enteros
-    OurSeqNum   int     // The sequence number chosen by a request originating at this node 
-    HigSeqNum   int     // The highest sequence number seen in any REQUEST message sent or recived
+    OurSeqNum   []int     // The sequence number chosen by a request originating at this node 
     OutRepCnt   int     // The number of REPLY  messages still expected
     // Booleanos
     ReqCS       bool    // True if the node is requesting the critical section
@@ -48,7 +47,7 @@ type RASharedDB struct {
 func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
     messageTypes := []ms.Message{Request{}, Reply{}}
     msgs := ms.New(me, usersFile, messageTypes)
-    ra := RASharedDB{me, MAX_PROCESSES, actor_t, 0, 0, MAX_PROCESSES, false, make([]bool, MAX_PROCESSES), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
+    ra := RASharedDB{me, MAX_PROCESSES, actor_t, make([]int, MAX_PROCESSES), MAX_PROCESSES, false, make([]bool, MAX_PROCESSES), sync.Mutex{}, &msgs,  make(chan bool),  make(chan bool)}
 
     go func ()  {
         for {
@@ -59,15 +58,16 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                 switch msg := (ra.ms.Receive()).(type) {
                 // Alguien quiere entrar en SC
                 case Request:
+
+                    cmd.MaxArray(ra.OurSeqNum, msg.Clock)
                     // Si no queremos entrar en SC: enviamos reply
                     // Si queremos entrar en SC enviamos reply si:
                     //      - El que quiere entrar tiene un clock mayor
                     //      - El que quiere entrar tiene un clock igual y un pid mayor
                     ra.Mutex.Lock()
-                    ra.HigSeqNum = cmd.Max(ra.HigSeqNum, msg.Clock)
                     condition := !ra.ReqCS ||
-                        (ra.HigSeqNum > msg.Clock && cmd.Exclude(ra.Actor, msg.Actor)) ||
-                        (ra.HigSeqNum == msg.Clock && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor))
+                        (cmd.Max(ra.OurSeqNum) > ra.OurSeqNum[msg.Pid-1] && cmd.Exclude(ra.Actor, msg.Actor)) ||
+                        (cmd.Max(ra.OurSeqNum) > ra.OurSeqNum[msg.Pid-1] && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor))
                     ra.Mutex.Unlock()
                    
                     if condition {
@@ -103,7 +103,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
 //      Ricart-Agrawala Generalizado
 func (ra *RASharedDB) PreProtocol(){
     ra.Mutex.Lock()
-    ra.OurSeqNum = ra.OurSeqNum + 1
+    ra.OurSeqNum[ra.me-1] = ra.OurSeqNum[ra.me-1] + 1
     ra.ReqCS = true
     ra.OutRepCnt = ra.OutRepCnt - 1
     ra.Mutex.Unlock()

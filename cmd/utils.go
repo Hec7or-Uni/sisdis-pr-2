@@ -28,7 +28,21 @@ func Exclude(A1 ACTOR, A2 ACTOR) bool {
 	return A1 == ESCRITOR || A2 == ESCRITOR
 }
 
-func Max(a, b int) int {
-	if a > b { return a}
-	return b
+func MaxArray(a []int, b []int) []int {
+	for i := 0; i < len(a); i++ {
+		if a[i] < b[i] {
+			a[i] = b[i]
+		}
+	}
+	return a
+}
+
+func Max(a []int) int {
+	max := a[0]
+	for _, v := range a {
+			if v > max {
+					max = v
+			}
+	}
+	return max
 }

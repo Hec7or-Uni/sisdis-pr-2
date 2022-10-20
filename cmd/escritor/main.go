@@ -25,7 +25,7 @@ func main() {
 	PID, _ := strconv.Atoi(args[0])
 	
 	ra := ra.New(PID, args[1], cmd.ESCRITOR)
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 	for i := 0; i < ITERACIONES; i++ {
 		ra.PreProtocol()
 		EscribirFichero("Hola mundo\n")
