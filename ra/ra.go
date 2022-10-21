@@ -63,25 +63,24 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                 switch msg := (ra.ms.Receive()).(type) {
                 // Alguien quiere entrar en SC
                 case Request:
-                    // Si no queremos entrar en SC: enviamos reply
+                    // Si queremos entrar en SC: enviamos reply
                     // Si queremos entrar en SC enviamos reply si:
                     //      - El que quiere entrar tiene un clock mayor
                     //      - El que quiere entrar tiene un clock igual y un pid mayor
                     ra.Mutex.Lock()
-                    condition := !ra.ReqCS ||
-                        (cmd.Max(ra.OurSeqNum) > ra.OurSeqNum[msg.Pid-1] && cmd.Exclude(ra.Actor, msg.Actor)) ||
-                        (cmd.Max(ra.OurSeqNum) > ra.OurSeqNum[msg.Pid-1] && ra.me > msg.Pid && cmd.Exclude(ra.Actor, msg.Actor))
+                    condition := ra.ReqCS && cmd.Exclude(ra.Actor, msg.Actor) && 
+                        (cmd.Max(msg.Clock, msg.Pid-1) > ra.OurSeqNum[msg.Pid-1] || (cmd.Max(msg.Clock,  msg.Pid-1) == ra.OurSeqNum[msg.Pid-1] && ra.me < msg.Pid ))
                     ra.Mutex.Unlock()
 
                     cmd.MaxArray(ra.OurSeqNum, msg.Clock)
                 
-                    if condition {
+                    if !condition {
                         ra.ms.Send(msg.Pid, Reply{})
-                        continue
+                    } else {
+                        // Estamos en sección crítica y el mensaje es de un proceso con un clock mayor (tenemos prioridad)
+                        ra.RepDefd[msg.Pid-1] = true
                     }
 
-                    // Estamos en sección crítica y el mensaje es de un proceso con un clock mayor (tenemos prioridad)
-                    ra.RepDefd[msg.Pid-1] = true
                     
                 // Recibo respuesta/permiso para entrar en SC
                 case Reply:

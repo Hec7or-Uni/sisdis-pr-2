@@ -37,13 +37,14 @@ func MaxArray(a []int, b []int) []int {
 	return a
 }
 
-func Max(a []int) int {
+func Max(a []int, pid int) int {
 	max := a[0]
-	for _, v := range a {
-		if v > max {
-			max = v
+	for i := 0; i < len(a); i++ {
+		if i != pid && a[i] > max {
+			max = a[i]
 		}
 	}
+	
 	return max
 }
 

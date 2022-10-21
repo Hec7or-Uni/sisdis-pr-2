@@ -1,12 +1,3 @@
-
-Escritor 2 escribiendo en el fichero.
-Escritor 1 escribiendo en el fichero.
-Escritor 2 escribiendo en el fichero.
-Escritor 2 escribiendo en el fichero.
-Escritor 1 escribiendo en el fichero.
-Escritor 1 escribiendo en el fichero.
-Escritor 1 escribiendo en el fichero.
-Escritor 2 escribiendo en el fichero.
 Escritor 2 escribiendo en el fichero.
 Escritor 1 escribiendo en el fichero.
 Escritor 2 escribiendo en el fichero.
@@ -47,4 +38,3 @@ Escritor 2 escribiendo en el fichero.
 Escritor 1 escribiendo en el fichero.
 Escritor 2 escribiendo en el fichero.
 Escritor 1 escribiendo en el fichero.
-Escritor 2 escribiendo en el fichero.
