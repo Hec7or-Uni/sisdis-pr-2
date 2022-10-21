@@ -7,17 +7,9 @@ import (
 	"sisdis-pr-2/ra"
 	"strconv"
 	"time"
-
-	"github.com/DistributedClocks/GoVector/govec"
 )
 
-func EscribirFichero(fragmento string) {
-	file, err := os.OpenFile("file.txt", os.O_APPEND|os.O_RDWR, 0600)
-	cmd.CheckError(err)
-	defer file.Close()
-		
-	file.WriteString(fragmento)
-}
+
 
 func main() {
 	const ACTOR = "escritor"
@@ -25,15 +17,15 @@ func main() {
 
 	args := os.Args[1:]
 	PID, _ := strconv.Atoi(args[0])
-	logger := govec.InitGoVector(fmt.Sprintf("P%d", PID), fmt.Sprintf("logs/r%d", PID), govec.GetDefaultConfig())
-	ra := ra.New(PID, args[1], cmd.ESCRITOR, logger)
+	ra := ra.New(PID, args[1], cmd.ESCRITOR)
 	time.Sleep(1 * time.Second)
 	for i := 0; i < ITERACIONES; i++ {
-		ra.PreProtocol(logger)
-		EscribirFichero("Hola mundo\n")
-		fmt.Printf("%d esta escribiendo...\n", PID)
-		ra.PostProtocol(logger)
-		time.Sleep(3 * time.Millisecond)
+		ra.PreProtocol()
+		fragmento := fmt.Sprintf("Escritor %d escribiendo en el fichero.\n", PID)
+		cmd.EscribirFichero(args[2], fragmento)
+		fmt.Println(fragmento)
+		ra.PostProtocol(fragmento)
+		time.Sleep(20 * time.Millisecond)
 	}
 	ra.Stop()
 }

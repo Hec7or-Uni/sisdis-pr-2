@@ -5,7 +5,7 @@
 * FECHA: septiembre de 2021
 * FICHERO: ms_test.go
 * DESCRIPCIÓN: Implementación de un sistema de mensajería asíncrono, insipirado en el Modelo Actor
-*/
+ */
 package ms
 
 import (
@@ -36,5 +36,3 @@ func TestSendReceiveMessage(t *testing.T) {
 		}
 	}
 }
-
-

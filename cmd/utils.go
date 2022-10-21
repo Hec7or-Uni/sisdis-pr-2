@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 )
 
@@ -45,4 +46,18 @@ func Max(a []int) int {
 			}
 	}
 	return max
+}
+
+func EscribirFichero(path, fragmento string) {
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, 0600)
+	CheckError(err)
+	defer file.Close()
+		
+	file.WriteString(fragmento)
+}
+
+func LeerFichero(path string) string {
+	data, err := ioutil.ReadFile(path)
+	CheckError(err)
+	return string(data)
 }
