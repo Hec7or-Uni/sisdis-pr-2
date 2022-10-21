@@ -106,52 +106,55 @@ import (
      return &ra
  }
  
- //Pre: Verdad
- //Post: Realiza  el  PreProtocol  para el  algoritmo de
- //      Ricart-Agrawala Generalizado
- func (ra *RASharedDB) PreProtocol() {
-     ra.Mutex.Lock()
-     ra.OurSeqNum[ra.me-1] = ra.OurSeqNum[ra.me-1] + 1
-     ra.ReqCS = true
-     ra.OutRepCnt = ra.OutRepCnt - 1
-     ra.Mutex.Unlock()
+//Pre: Verdad
+//Post: Realiza  el  PreProtocol  para el  algoritmo de
+//      Ricart-Agrawala Generalizado
+func (ra *RASharedDB) PreProtocol() {
+    ra.Mutex.Lock()
+    ra.OurSeqNum[ra.me-1] = ra.OurSeqNum[ra.me-1] + 1
+    ra.ReqCS = true
+    ra.OutRepCnt = ra.OutRepCnt - 1
+    ra.Mutex.Unlock()
+
+    for i := 1; i <= ra.N; i++ {
+        if i != ra.me {
+            ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
+        }
+    }
+
+    <- ra.chrep
+}
  
-     for i := 1; i <= ra.N; i++ {
-         if i != ra.me {
-             ra.ms.Send(i, Request{ra.OurSeqNum, ra.me, ra.Actor})
-         }
-     }
- 
-     <- ra.chrep
- }
- 
- //Pre: Verdad
- //Post: Realiza  el  PostProtocol  para el  algoritmo de
- //      Ricart-Agrawala Generalizado
- func (ra *RASharedDB) PostProtocol(fragmento string){
-     ra.Mutex.Lock()
-     ra.ReqCS = false
-     ra.Mutex.Unlock()
- 
-     if ra.Actor == cmd.ESCRITOR {
+//Pre: Verdad
+//Post: Realiza  el  PostProtocol  para el  algoritmo de
+//      Ricart-Agrawala Generalizado
+func (ra *RASharedDB) PostProtocol(fragmento string){
+    ra.Mutex.Lock()
+    ra.ReqCS = false
+    ra.Mutex.Unlock()
+
+    if ra.Actor == cmd.ESCRITOR {
         for j := 1; j <= ra.N; j++ {
             if j != ra.me {
                 ra.ms.Send(j, Update{fragmento})
             }
+        }
     }
-     for j := 1; j <= ra.N; j++ {
-         if ra.RepDefd[j-1] {
-            ra.RepDefd[j-1] = false
-            ra.ms.Send(j, Reply{})
-         }
-     }
-     ra.OutRepCnt = MAX_PROCESSES
- }
+
+    ra.Mutex.Lock()
+    for j := 1; j <= ra.N; j++ {
+        if ra.RepDefd[j-1] {
+        ra.RepDefd[j-1] = false
+        ra.ms.Send(j, Reply{})
+        }
+    }
+
+    ra.OutRepCnt = MAX_PROCESSES
+    ra.Mutex.Unlock()
 }
- 
- func (ra *RASharedDB) Stop(){
+
+func (ra *RASharedDB) Stop(){
     fmt.Println("Stopping RA")
     ra.ms.Stop()
     ra.done <- true
- }
- 
+}

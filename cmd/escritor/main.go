@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-
-
 func main() {
 	const ACTOR = "escritor"
 	const ITERACIONES = 20

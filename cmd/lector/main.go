@@ -15,7 +15,7 @@ func main() {
 
 	args := os.Args[1:]
 	PID, _ := strconv.Atoi(args[0])
-	
+
 	ra := ra.New(PID, args[1], cmd.LECTOR)
 	time.Sleep(1 * time.Second)
 	for i := 0; i < ITERACIONES; i++ {

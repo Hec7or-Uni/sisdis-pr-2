@@ -13,12 +13,11 @@ func CheckError(err error) {
 	}
 }
 
-
 type ACTOR string
 
 const (
-	LECTOR	ACTOR	=	"lector"
-	ESCRITOR			= "escritor"
+	LECTOR   ACTOR = "lector"
+	ESCRITOR       = "escritor"
 )
 
 // RD && RD -> FALSE
@@ -41,9 +40,9 @@ func MaxArray(a []int, b []int) []int {
 func Max(a []int) int {
 	max := a[0]
 	for _, v := range a {
-			if v > max {
-					max = v
-			}
+		if v > max {
+			max = v
+		}
 	}
 	return max
 }
@@ -52,7 +51,7 @@ func EscribirFichero(path, fragmento string) {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, 0600)
 	CheckError(err)
 	defer file.Close()
-		
+
 	file.WriteString(fragmento)
 }
 
