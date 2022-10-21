@@ -69,7 +69,7 @@ func New(me int, usersFile string, actor_t cmd.ACTOR) (*RASharedDB) {
                     //      - El que quiere entrar tiene un clock igual y un pid mayor
                     ra.Mutex.Lock()
                     condition := ra.ReqCS && cmd.Exclude(ra.Actor, msg.Actor) && 
-                        (cmd.Max(msg.Clock, msg.Pid-1) > ra.OurSeqNum[msg.Pid-1] || (cmd.Max(msg.Clock,  msg.Pid-1) == ra.OurSeqNum[msg.Pid-1] && ra.me < msg.Pid ))
+                        (cmd.Max(msg.Clock) > cmd.Max(ra.OurSeqNum) || (cmd.Max(msg.Clock) == cmd.Max(ra.OurSeqNum) && ra.me < msg.Pid ))
                     ra.Mutex.Unlock()
 
                     cmd.MaxArray(ra.OurSeqNum, msg.Clock)
