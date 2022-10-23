@@ -28,6 +28,8 @@ func Exclude(A1 ACTOR, A2 ACTOR) bool {
 	return A1 == ESCRITOR || A2 == ESCRITOR
 }
 
+// PRE: 0 < n <= MAX_PROCESSES
+// POST: Devuelve un array de n elementos con el MAX(v[i], w[i]) para todo i = 0..n-1
 func MaxArray(a []int, b []int) []int {
 	for i := 0; i < len(a); i++ {
 		if a[i] < b[i] {
@@ -37,15 +39,13 @@ func MaxArray(a []int, b []int) []int {
 	return a
 }
 
-func Max(a []int) int {
-	max := a[0]
+func GreaterEqual(a []int, b []int) bool {
 	for i := 0; i < len(a); i++ {
-		if a[i] > max {
-			max = a[i]
+		if a[i] < b[i] {
+			return false
 		}
 	}
-	
-	return max
+	return true
 }
 
 func EscribirFichero(path, fragmento string) {
